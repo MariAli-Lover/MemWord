@@ -8,6 +8,7 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Vector;
 
 import dbg.Debugger;
 
@@ -71,6 +72,24 @@ public class DB {
 		try {
 			ResultSet rs = state.executeQuery(query);
 			return rs;
+		} catch(SQLException e) {
+			System.err.println(e.getMessage());
+			return null;
+		}
+	}
+	
+	public Vector<String> getdictListData() {
+		try {
+			String query = "SELECT * FROM dict";
+			ResultSet rs = fetch(query);
+			
+			Vector<String> dictList = new Vector<String>();
+			
+			while(rs.next())
+				dictList.add(rs.getString("name"));
+			
+			return dictList;
+			
 		} catch(SQLException e) {
 			System.err.println(e.getMessage());
 			return null;
