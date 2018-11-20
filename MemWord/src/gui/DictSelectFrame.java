@@ -18,6 +18,7 @@ public class DictSelectFrame extends JFrame {
 	final JLabel titleLabel;
 	final DefaultListModel<String> dictListModel;
 	final JList<String> dictList;
+	DefaultListCellRenderer dictListRenderer;
 	JButton selectButton;
 	JButton importButton;
 
@@ -52,6 +53,9 @@ public class DictSelectFrame extends JFrame {
 				}
 			}
 		});
+		
+		dictListRenderer = (DefaultListCellRenderer) dictList.getCellRenderer();
+		dictListRenderer.setHorizontalAlignment(JLabel.CENTER);
 
 		selectButton = new JButton("Select");
 		selectButton.addActionListener(new ActionListener() {
@@ -63,8 +67,6 @@ public class DictSelectFrame extends JFrame {
 					String selectedDict;
 
 					selectedDict = dictList.getSelectedValue();
-					setVisible(false);
-					dispose();
 					MenuFrame mf = openMenuFrame(selectedDict);
 				}
 			}
@@ -89,7 +91,8 @@ public class DictSelectFrame extends JFrame {
 					System.out.println(filepath);
 					dictname = JOptionPane.showInputDialog(DictSelectFrame.this, "Enter Dictionary Name");
 					
-					db.import_csv(filepath, dictname);
+					db.importCSV(filepath, dictname);
+					dictListModel.addElement(dictname);
 				}
 				
 			}

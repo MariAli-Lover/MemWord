@@ -1,13 +1,18 @@
 package dbmanager;
 
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Vector;
 
 import dbg.Debugger;
@@ -17,7 +22,7 @@ public class DB {
 	String path = null; // later set to default
 	Connection conn = null;
 	Statement state = null;
-	
+
 	public DB(String path) {
 		try {
 			Debugger.log("init DB...");
@@ -25,28 +30,123 @@ public class DB {
 			conn = DriverManager.getConnection(path);
 			state = conn.createStatement();
 			state.setQueryTimeout(30);
-			
-			if(!table_exists("dict")) 
-				query("CREATE TABLE dict (id INTEGER PRIMARY KEY AUTOINCREMENT, name STRING)");
-			
+
+			if(!tableExists("dict")) 
+				query("CREATE TABLE dict (id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+						"name STRING)");
+
 			Debugger.log("init DB ended!");
-			
+
 		} catch(SQLException e) {
 			System.err.println(e.getMessage());
 		}
 	}
-	
+
 	public DB() {
 		this("jdbc:sqlite:./test.db"); // set path to default
 		this.path = "jdbc:sqlite:./test.db";
 	}
 	
-	public boolean table_exists(String t_name) {
+	public HashMap<String, String> learnRandomWordSelect(String dictName) {
+		
+		HashMap<String, String> hm;
+		String query = "SELECT * FROM `$tableName` WHERE freq = 0 ORDER BY RANDOM() LIMIT 1";
+		PreparedStatement stmt = null;
+		ResultSet rs;
+		
 		try {
-			Debugger.log("table_exists with " + t_name);
-			
+			hm = new HashMap<String, String>();
+			query.replace("$tableName", dictName);
+			stmt = conn.prepareStatement(query);
+			rs = stmt.executeQuery();
+			if(rs.next()) {
+				Debugger.log("learnRandomWordSelect");
+				hm.put("word", rs.getString("word"));
+				hm.put("mean", rs.getString("mean"));
+				hm.put("freq", String.valueOf(rs.getInt("freq")));
+			}
+			return hm;
+		} catch(SQLException e) {
+			System.err.println(e.getMessage());
+			return null;
+		}
+		
+	}
+	
+	public boolean hasWordLeft(String dictName) {
+		
+		String query = "SELECT * FROM `$tableName` WHERE freq = 0";
+		PreparedStatement stmt = null;
+		ResultSet rs = null;
+		
+		 try {
+			 query.replace("$tableName", dictName);
+			 stmt = conn.prepareStatement(query);
+			 rs = stmt.executeQuery();
+			 return rs.next();
+		 } catch (SQLException e) {
+			 System.err.println(e.getMessage());
+			 return false;
+		 }
+		
+	}
+
+	public void insertDict(String dictName) { // Insert dictionary name into dict
+
+		String query = "INSERT INTO dict (id, name) VALUES (NULL, ?)";
+		PreparedStatement stmt = null;
+
+		try {
+			stmt = conn.prepareStatement(query);
+			stmt.setString(1, dictName);
+			stmt.executeUpdate();
+			stmt.close();
+		} catch (SQLException e) {
+			System.err.println(e.getMessage());
+		}
+
+	}
+
+	public void createDict(String dictName) { // Create new dictionary
+
+		String query = "CREATE TABLE `$tableName` (id INTEGER PRIMARY KEY AUTOINCREMENT, word STRING, mean STRING, freq INTEGER)";
+		PreparedStatement stmt = null;
+
+		try {
+			query.replace("$tableName", dictName);
+			stmt = conn.prepareStatement(query);
+			stmt.executeUpdate();
+			stmt.close();
+		} catch (SQLException e) {
+			System.err.println(e.getMessage());
+		}
+
+	}
+
+	public void insertWord(String dictName, String origWord, String meanWord) { // Insert word into dictionary
+
+		String query = "INSERT INTO `$tableName` (id, word, mean, freq) VALUES (NULL, ?, ?, 0)";
+		PreparedStatement stmt = null;
+
+		try {
+			query.replace("$tableName", dictName);
+			stmt = conn.prepareStatement(query);
+			stmt.setString(1, origWord);
+			stmt.setString(2, meanWord);
+			stmt.executeUpdate();
+			stmt.close();
+		} catch (SQLException e) {
+			System.err.println(e.getMessage());
+		}
+
+	}
+
+	public boolean tableExists(String tableName) {
+		try {
+			Debugger.log("table exists with " + tableName);
+
 			DatabaseMetaData md = conn.getMetaData();
-			ResultSet rs = md.getTables(null, null, t_name, null);
+			ResultSet rs = md.getTables(null, null, tableName, null);
 			return rs.next();
 			// rs.last();
 			// return (rs.getRow() > 0);
@@ -55,19 +155,15 @@ public class DB {
 		}
 		return false;
 	}
-	
+
 	public void query(String query) {
-		insert(query);
-	}
-	
-	public void insert(String query) {
 		try {
 			state.executeUpdate(query);
 		} catch(SQLException e) {
 			System.err.println(e.getMessage());
 		}
 	}
-	
+
 	public ResultSet fetch(String query) {
 		try {
 			ResultSet rs = state.executeQuery(query);
@@ -77,62 +173,56 @@ public class DB {
 			return null;
 		}
 	}
-	
+
 	public Vector<String> getdictListData() {
 		try {
 			String query = "SELECT * FROM dict";
 			ResultSet rs = fetch(query);
-			
+
 			Vector<String> dictList = new Vector<String>();
-			
+
 			while(rs.next())
 				dictList.add(rs.getString("name"));
-			
+
 			return dictList;
-			
+
 		} catch(SQLException e) {
 			System.err.println(e.getMessage());
 			return null;
 		}
 	}
-	
-	public void import_csv(String csv_path, String t_name) {
+
+	public void importCSV(String CSVpath, String tableName) {
 		BufferedReader br = null;
 		String line = "";
-		String query;
 
-		
+		if(!tableExists(tableName)) {
+			insertDict(tableName);
+			createDict(tableName);
+		}
+
 		try {
-			// if(table_exists(t_name)) return;
-			
-			
-			if(!table_exists(t_name)) {
-				insert(String.format("INSERT INTO dict (id, name) VALUES (NULL, '%s')", t_name));
-				insert(String.format("CREATE TABLE %s (id INTEGER PRIMARY KEY AUTOINCREMENT, orig_word STRING, mean_word STRING, freq INTEGER)", t_name));
-			}
-			
-			br = new BufferedReader(new FileReader(csv_path));
-			
+			br = new BufferedReader(new FileReader(CSVpath));
+
 			while((line = br.readLine()) != null) {
 				String[] row = line.split(",");
 				String orig_word = row[0];
 				String mean_word = row[1];
-				
+
 				Debugger.log("word: " + orig_word + " " + mean_word);
-				
+
 				// words are initialized in DB
-				query = String.format("INSERT INTO %s (id, orig_word, mean_word, freq) VALUES (NULL, '%s', '%s', 0)", t_name, orig_word, mean_word);
-				
-				insert(query);
-				
+				insertWord(tableName, orig_word, mean_word);
+
 			}
-		} catch (Exception e) {
+		} catch (IOException e) {
 			System.err.println(e.getMessage());
 		}
+
 	}
-	
-	
-	
+
+
+
 	public void close() {
 		try {
 			if(conn != null)
@@ -141,7 +231,7 @@ public class DB {
 			System.err.println(e.getMessage());
 		}
 	}
-			
-	
+
+
 
 }
