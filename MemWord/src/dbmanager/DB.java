@@ -36,6 +36,7 @@ public class DB {
 						"name STRING)");
 
 			Debugger.log("init DB ended!");
+			conn.close();
 
 		} catch(SQLException e) {
 			System.err.println(e.getMessage());
@@ -46,7 +47,27 @@ public class DB {
 		this("jdbc:sqlite:./test.db"); // set path to default
 		this.path = "jdbc:sqlite:./test.db";
 	}
-	
+
+	public void setWordFreq(String dictName, String wordName, int freq) {
+		String query = "UPDATE `$tableName` SET freq = ? WHERE word = ?";
+		PreparedStatement stmt = null;
+
+		try {
+			conn = DriverManager.getConnection(path);
+			query = query.replace("$tableName", dictName);
+			Debugger.log(query);
+			stmt = conn.prepareStatement(query);
+			stmt.setInt(1, freq);
+			stmt.setString(2, wordName);
+			stmt.executeUpdate();
+			conn.close();
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			Debugger.log(e.getMessage());
+		}
+
+	}
+
 	public HashMap<String, String> learnRandomWordSelect(String dictName) {
 		
 		HashMap<String, String> hm;
@@ -55,8 +76,10 @@ public class DB {
 		ResultSet rs;
 		
 		try {
+			conn = DriverManager.getConnection(path);
 			hm = new HashMap<String, String>();
-			query.replace("$tableName", dictName);
+			query = query.replace("$tableName", dictName);
+			Debugger.log(query);
 			stmt = conn.prepareStatement(query);
 			rs = stmt.executeQuery();
 			if(rs.next()) {
@@ -64,8 +87,15 @@ public class DB {
 				hm.put("word", rs.getString("word"));
 				hm.put("mean", rs.getString("mean"));
 				hm.put("freq", String.valueOf(rs.getInt("freq")));
+				
+				Debugger.log("test2");
+
+				conn.close();
+				return hm;
 			}
-			return hm;
+			conn.close();
+			
+			return null;
 		} catch(SQLException e) {
 			System.err.println(e.getMessage());
 			return null;
@@ -80,9 +110,12 @@ public class DB {
 		ResultSet rs = null;
 		
 		 try {
-			 query.replace("$tableName", dictName);
+			conn = DriverManager.getConnection(path);
+
+			 query = query.replace("$tableName", dictName);
 			 stmt = conn.prepareStatement(query);
 			 rs = stmt.executeQuery();
+			 conn.close();
 			 return rs.next();
 		 } catch (SQLException e) {
 			 System.err.println(e.getMessage());
@@ -97,10 +130,12 @@ public class DB {
 		PreparedStatement stmt = null;
 
 		try {
+			conn = DriverManager.getConnection(path);
 			stmt = conn.prepareStatement(query);
 			stmt.setString(1, dictName);
 			stmt.executeUpdate();
 			stmt.close();
+			conn.close();
 		} catch (SQLException e) {
 			System.err.println(e.getMessage());
 		}
@@ -113,10 +148,12 @@ public class DB {
 		PreparedStatement stmt = null;
 
 		try {
-			query.replace("$tableName", dictName);
+			conn = DriverManager.getConnection(path);
+			query = query.replace("$tableName", dictName);
 			stmt = conn.prepareStatement(query);
 			stmt.executeUpdate();
 			stmt.close();
+			conn.close();
 		} catch (SQLException e) {
 			System.err.println(e.getMessage());
 		}
@@ -129,12 +166,14 @@ public class DB {
 		PreparedStatement stmt = null;
 
 		try {
-			query.replace("$tableName", dictName);
+			conn = DriverManager.getConnection(path);
+			query = query.replace("$tableName", dictName);
 			stmt = conn.prepareStatement(query);
 			stmt.setString(1, origWord);
 			stmt.setString(2, meanWord);
 			stmt.executeUpdate();
 			stmt.close();
+			conn.close();
 		} catch (SQLException e) {
 			System.err.println(e.getMessage());
 		}
@@ -145,6 +184,7 @@ public class DB {
 		try {
 			Debugger.log("table exists with " + tableName);
 
+			conn = DriverManager.getConnection(path);
 			DatabaseMetaData md = conn.getMetaData();
 			ResultSet rs = md.getTables(null, null, tableName, null);
 			return rs.next();
