@@ -61,9 +61,41 @@ public class LearnFrame extends JFrame {
 		
 		btn1.addActionListener(new ActionListener() {
 
-			@Override
 			public void actionPerformed(ActionEvent e) {
-				// TODO Auto-generated method stub
+				String wordName = wordLabel.getText();
+				
+				db.setWordFreq(currentDict, wordName, 0);
+				
+				if(db.hasWordLeft(currentDict))
+					refreshWord();
+				else
+					prompt_reset();
+			}
+			
+		});
+		
+		btn2.addActionListener(new ActionListener() {
+
+			public void actionPerformed(ActionEvent e) {
+				String wordName = wordLabel.getText();
+				
+				db.setWordFreq(currentDict, wordName, 1);
+				
+				if(db.hasWordLeft(currentDict))
+					refreshWord();
+				else
+					prompt_reset();
+			}
+			
+		});
+		
+		btn3.addActionListener(new ActionListener() {
+
+			public void actionPerformed(ActionEvent e) {
+				String wordName = wordLabel.getText();
+				
+				db.setWordFreq(currentDict, wordName, 2);
+				
 				if(db.hasWordLeft(currentDict))
 					refreshWord();
 				else
@@ -82,7 +114,34 @@ public class LearnFrame extends JFrame {
 	}
 	
 	public void prompt_reset() {
+		Object[] options = {"Yes(Removes all progress)",
+							"No(Go back)"};
+		int sel = JOptionPane.showOptionDialog(new JFrame(),
+				"No words left to learn! Reset?",
+				"Reset Prompt",
+				JOptionPane.YES_NO_OPTION,
+				JOptionPane.QUESTION_MESSAGE,
+				null,
+				options,
+				options[1]);
 		
+		Debugger.log("prompt_reset: " + sel);
+		
+		if(sel == 0) {
+			db.resetWordFreq(currentDict);
+			refreshWord();
+		}
+		else if(sel == 1) {
+			MenuFrame mf = openMenuFrame(currentDict);
+		}
+		
+		
+	}
+	
+	public MenuFrame openMenuFrame(String s) {
+		setVisible(false);
+		dispose();
+		return new MenuFrame(s);
 	}
 
 }

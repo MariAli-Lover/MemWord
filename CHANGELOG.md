@@ -4,6 +4,15 @@ All notable changes to MemWord Project for Computer Programming II Class.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5] - 2018-12-05
+### Added
+- Finished basic features of Learn GUI (prompt added)
+- Some DB methods for additional DB functionalities (quiz word selection, freq reset)
+- Prototype of Quiz1 frame
+
+### Changes
+- DB code revision & logic change
+
 ## [0.4] - 2018-11-28
 ### Added
 - Almost finished learn GUI & its functionalities (prompt TBA)
@@ -38,6 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Parsing csv files into DB
 - Querying data from DB
 
-[0.4]:https://github.com/MariAli-Lover/MemWord/compare/a04cf28...master
-[0.3]:https://github.com/MariAli-Lover/MemWord/compare/8ee2bae...a04cf28
+[0.5]: https://github.com/MariAli-Lover/MemWord/compare/595394a...master
+[0.4]: https://github.com/MariAli-Lover/MemWord/compare/a04cf28...595394a 
+[0.3]: https://github.com/MariAli-Lover/MemWord/compare/8ee2bae...a04cf28
 [0.2]: https://github.com/MariAli-Lover/MemWord/compare/a8b9ac2...8ee2bae

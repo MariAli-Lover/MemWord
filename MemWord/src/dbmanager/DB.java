@@ -21,21 +21,24 @@ public class DB {
 
 	String path = null; // later set to default
 	Connection conn = null;
-	Statement state = null;
 
 	public DB(String path) {
+
+		Statement stmt;
+
 		try {
+
 			Debugger.log("init DB...");
 			this.path = path;
 			conn = DriverManager.getConnection(path);
-			state = conn.createStatement();
-			state.setQueryTimeout(30);
+			stmt = conn.createStatement();
 
 			if(!tableExists("dict")) 
-				query("CREATE TABLE dict (id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+				stmt.executeUpdate("CREATE TABLE dict (id INTEGER PRIMARY KEY AUTOINCREMENT, " +
 						"name STRING)");
 
 			Debugger.log("init DB ended!");
+			stmt.close();
 			conn.close();
 
 		} catch(SQLException e) {
@@ -47,6 +50,53 @@ public class DB {
 		this("jdbc:sqlite:./test.db"); // set path to default
 		this.path = "jdbc:sqlite:./test.db";
 	}
+	
+	public int countWord(String dictName) {
+		String query = "SELECT COUNT(*) AS total FROM `$tableName`";
+		Statement stmt = null;
+		ResultSet rs;
+		int count;
+		
+		try {
+			conn = DriverManager.getConnection(path);
+			
+			stmt = conn.createStatement();
+			rs = stmt.executeQuery(query);
+			
+			count = rs.getInt("total");
+			
+			stmt.close();
+			rs.close();
+			
+			return count;
+			
+		} catch (SQLException e) {
+			System.err.println(e.getMessage());
+			return -1;
+		}
+		
+	}
+	
+	public void resetWordFreq(String dictName) {
+		String query = "UPDATE `$tableName` set freq = 0";
+		Statement stmt = null;
+		
+		try {
+			conn = DriverManager.getConnection(path);
+			
+			query = query.replace("$tableName", dictName);
+
+			stmt = conn.createStatement();
+			stmt.executeUpdate(query);
+			
+			stmt.close();
+			conn.close();
+			
+		} catch (SQLException e) {
+			System.err.println(e.getMessage());
+		}
+		
+	}
 
 	public void setWordFreq(String dictName, String wordName, int freq) {
 		String query = "UPDATE `$tableName` SET freq = ? WHERE word = ?";
@@ -54,18 +104,53 @@ public class DB {
 
 		try {
 			conn = DriverManager.getConnection(path);
+
 			query = query.replace("$tableName", dictName);
 			Debugger.log(query);
+
 			stmt = conn.prepareStatement(query);
 			stmt.setInt(1, freq);
 			stmt.setString(2, wordName);
 			stmt.executeUpdate();
+			
+			stmt.close();
 			conn.close();
 		} catch (SQLException e) {
-			// TODO Auto-generated catch block
 			Debugger.log(e.getMessage());
 		}
 
+	}
+	
+	public ArrayList<HashMap<String, String>> quizRandomWordSelect(String dictName, int count) {
+		ArrayList<HashMap<String, String>> hm;
+		String query = "SELECT * FROM `$tableName` WHERE freq = 0 ORDER BY RANDOM() LIMIT ?";
+		PreparedStatement stmt = null;
+		ResultSet rs;
+		
+		try {
+			hm = new ArrayList<HashMap<String, String>>();
+			
+			conn = DriverManager.getConnection(path);
+			
+			query = query.replace("$tableName", dictName);
+			stmt = conn.prepareStatement(query);
+			stmt.setInt(1, count);
+			
+			rs = stmt.executeQuery();
+			while(rs.next()) {
+				HashMap<String, String> thm = new HashMap<String, String>();
+				thm.put("word", rs.getString("word"));
+				thm.put("mean", rs.getString("mean"));
+				thm.put("freq", String.valueOf(rs.getInt("freq")));
+				hm.add(thm);
+			}
+			
+			return hm;
+
+		} catch (SQLException e) {
+			System.err.println(e.getMessage());
+			return null;
+		}
 	}
 
 	public HashMap<String, String> learnRandomWordSelect(String dictName) {
@@ -76,11 +161,14 @@ public class DB {
 		ResultSet rs;
 		
 		try {
-			conn = DriverManager.getConnection(path);
 			hm = new HashMap<String, String>();
+
+			conn = DriverManager.getConnection(path);
+
 			query = query.replace("$tableName", dictName);
 			Debugger.log(query);
 			stmt = conn.prepareStatement(query);
+
 			rs = stmt.executeQuery();
 			if(rs.next()) {
 				Debugger.log("learnRandomWordSelect");
@@ -90,12 +178,16 @@ public class DB {
 				
 				Debugger.log("test2");
 
+				stmt.close();
 				conn.close();
 				return hm;
 			}
+			
+			stmt.close();
 			conn.close();
 			
 			return null;
+
 		} catch(SQLException e) {
 			System.err.println(e.getMessage());
 			return null;
@@ -108,15 +200,22 @@ public class DB {
 		String query = "SELECT * FROM `$tableName` WHERE freq = 0";
 		PreparedStatement stmt = null;
 		ResultSet rs = null;
+		Boolean exist;
 		
 		 try {
 			conn = DriverManager.getConnection(path);
 
 			 query = query.replace("$tableName", dictName);
 			 stmt = conn.prepareStatement(query);
+
 			 rs = stmt.executeQuery();
+			 exist = rs.next();
+			 
+			 stmt.close();
 			 conn.close();
-			 return rs.next();
+
+			 return exist;
+
 		 } catch (SQLException e) {
 			 System.err.println(e.getMessage());
 			 return false;
@@ -131,11 +230,14 @@ public class DB {
 
 		try {
 			conn = DriverManager.getConnection(path);
+
 			stmt = conn.prepareStatement(query);
 			stmt.setString(1, dictName);
 			stmt.executeUpdate();
+
 			stmt.close();
 			conn.close();
+
 		} catch (SQLException e) {
 			System.err.println(e.getMessage());
 		}
@@ -145,15 +247,18 @@ public class DB {
 	public void createDict(String dictName) { // Create new dictionary
 
 		String query = "CREATE TABLE `$tableName` (id INTEGER PRIMARY KEY AUTOINCREMENT, word STRING, mean STRING, freq INTEGER)";
-		PreparedStatement stmt = null;
+		PreparedStatement stmt;
 
 		try {
 			conn = DriverManager.getConnection(path);
+
 			query = query.replace("$tableName", dictName);
 			stmt = conn.prepareStatement(query);
 			stmt.executeUpdate();
+
 			stmt.close();
 			conn.close();
+
 		} catch (SQLException e) {
 			System.err.println(e.getMessage());
 		}
@@ -167,13 +272,16 @@ public class DB {
 
 		try {
 			conn = DriverManager.getConnection(path);
+
 			query = query.replace("$tableName", dictName);
 			stmt = conn.prepareStatement(query);
 			stmt.setString(1, origWord);
 			stmt.setString(2, meanWord);
 			stmt.executeUpdate();
+
 			stmt.close();
 			conn.close();
+
 		} catch (SQLException e) {
 			System.err.println(e.getMessage());
 		}
@@ -181,33 +289,64 @@ public class DB {
 	}
 
 	public boolean tableExists(String tableName) {
+		DatabaseMetaData md;
+		ResultSet rs;
+		Boolean exist;
+		
 		try {
-			Debugger.log("table exists with " + tableName);
-
 			conn = DriverManager.getConnection(path);
-			DatabaseMetaData md = conn.getMetaData();
-			ResultSet rs = md.getTables(null, null, tableName, null);
-			return rs.next();
+
+			md = conn.getMetaData();
+
+			rs = md.getTables(null, null, tableName, null);
+			exist = rs.next();
+			
+			conn.close();
+			
+			return exist;
 			// rs.last();
 			// return (rs.getRow() > 0);
+
 		} catch(SQLException e) {
 			System.err.println(e.getMessage());
+			return false;
 		}
-		return false;
 	}
 
 	public void query(String query) {
+		Statement stmt;
+		
 		try {
-			state.executeUpdate(query);
+			conn = DriverManager.getConnection(path);
+			
+			stmt = conn.createStatement();
+			
+			stmt.executeUpdate(query);
+			
+			stmt.close();
+			conn.close();
+
 		} catch(SQLException e) {
 			System.err.println(e.getMessage());
 		}
 	}
 
 	public ResultSet fetch(String query) {
+		
+		Statement stmt;
+		ResultSet rs;
+		
 		try {
-			ResultSet rs = state.executeQuery(query);
+			conn = DriverManager.getConnection(path);
+			
+			stmt = conn.createStatement();
+
+			rs = stmt.executeQuery(query);
+			
+			Debugger.log(query);
+			
 			return rs;
+
 		} catch(SQLException e) {
 			System.err.println(e.getMessage());
 			return null;
@@ -215,15 +354,27 @@ public class DB {
 	}
 
 	public Vector<String> getdictListData() {
+
+		Vector<String> dictList;
+		String query = "SELECT * FROM dict";
+		Statement stmt;
+		ResultSet rs;
+
+
 		try {
-			String query = "SELECT * FROM dict";
-			ResultSet rs = fetch(query);
-
-			Vector<String> dictList = new Vector<String>();
-
+			dictList = new Vector<String>();
+			
+			conn = DriverManager.getConnection(path);
+			
+			stmt = conn.createStatement();
+			
+			rs = stmt.executeQuery(query);
 			while(rs.next())
 				dictList.add(rs.getString("name"));
 
+			stmt.close();
+			conn.close();
+			
 			return dictList;
 
 		} catch(SQLException e) {
@@ -260,18 +411,5 @@ public class DB {
 		}
 
 	}
-
-
-
-	public void close() {
-		try {
-			if(conn != null)
-				conn.close();
-		} catch(SQLException e) {
-			System.err.println(e.getMessage());
-		}
-	}
-
-
 
 }
