@@ -2,7 +2,8 @@ package dbg;
 
 public class Debugger {
 	public static boolean isEnabled() {
-		return true;
+		return false;
+		// return true;
 	}
 	
 	public static void log(Object o) {

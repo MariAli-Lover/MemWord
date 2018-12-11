@@ -51,6 +51,101 @@ public class DB {
 		this.path = "jdbc:sqlite:./test.db";
 	}
 	
+	public void removeDict(String dictName) {
+		String query = "DELETE FROM dict WHERE name = ?";
+		PreparedStatement stmt = null;
+		
+		try {
+			conn = DriverManager.getConnection(path);
+			
+			stmt = conn.prepareStatement(query);
+			stmt.setString(1, dictName);
+			stmt.executeUpdate();
+			
+			stmt.close();
+			conn.close();
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void purgeDict(String dictName) {
+		String query = "DROP TABLE `$tableName`";
+		Statement stmt = null;
+		
+		try {
+			conn = DriverManager.getConnection(path);
+			
+			query = query.replace("$tableName", dictName);
+			
+			stmt = conn.createStatement();
+			stmt.executeUpdate(query);
+			
+			stmt.close();
+			conn.close();
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	public int countWordQuiz(String dictName) {
+		String query = "SELECT COUNT(*) AS total FROM `$tableName` WHERE freq <> 0";
+		Statement stmt = null;
+		ResultSet rs;
+		int count;
+		
+		try {
+			conn = DriverManager.getConnection(path);
+			
+			query = query.replace("$tableName", dictName);
+			
+			stmt = conn.createStatement();
+			rs = stmt.executeQuery(query);
+			
+			count = rs.getInt("total");
+			
+			stmt.close();
+			rs.close();
+			
+			return count;
+			
+		} catch (SQLException e) {
+			System.err.println(e.getMessage());
+			return -1;
+		}
+		
+	}
+
+	public int countLearnedWord(String dictName) {
+		String query = "SELECT COUNT(*) AS total FROM `$tableName` WHERE freq <> 0";
+		Statement stmt = null;
+		ResultSet rs;
+		int count;
+		
+		try {
+			conn = DriverManager.getConnection(path);
+			
+			query = query.replace("$tableName", dictName);
+			
+			stmt = conn.createStatement();
+			rs = stmt.executeQuery(query);
+			
+			count = rs.getInt("total");
+			
+			stmt.close();
+			rs.close();
+			
+			return count;
+			
+		} catch (SQLException e) {
+			System.err.println(e.getMessage());
+			return -1;
+		}
+		
+	}	
 	public int countWord(String dictName) {
 		String query = "SELECT COUNT(*) AS total FROM `$tableName`";
 		Statement stmt = null;
@@ -59,6 +154,8 @@ public class DB {
 		
 		try {
 			conn = DriverManager.getConnection(path);
+			
+			query = query.replace("$tableName", dictName);
 			
 			stmt = conn.createStatement();
 			rs = stmt.executeQuery(query);
@@ -123,7 +220,7 @@ public class DB {
 	
 	public ArrayList<HashMap<String, String>> quizRandomWordSelect(String dictName, int count) {
 		ArrayList<HashMap<String, String>> hm;
-		String query = "SELECT * FROM `$tableName` WHERE freq = 0 ORDER BY RANDOM() LIMIT ?";
+		String query = "SELECT * FROM `$tableName` WHERE freq <> 0 ORDER BY RANDOM() LIMIT ?";
 		PreparedStatement stmt = null;
 		ResultSet rs;
 		
@@ -144,6 +241,8 @@ public class DB {
 				thm.put("freq", String.valueOf(rs.getInt("freq")));
 				hm.add(thm);
 			}
+			
+			Debugger.log(hm.size());
 			
 			return hm;
 
@@ -195,7 +294,36 @@ public class DB {
 		
 	}
 	
-	public boolean hasWordLeft(String dictName) {
+	public boolean hasWordLeftQuiz(String dictName) {
+
+		String query = "SELECT * FROM `$tableName` WHERE freq <> 0";
+		PreparedStatement stmt = null;
+		ResultSet rs = null;
+		Boolean exist;
+
+		try {
+			conn = DriverManager.getConnection(path);
+
+			query = query.replace("$tableName", dictName);
+			stmt = conn.prepareStatement(query);
+
+			rs = stmt.executeQuery();
+			exist = rs.next();
+
+			stmt.close();
+			conn.close();
+
+			return exist;
+
+		} catch (SQLException e) {
+			System.err.println(e.getMessage());
+			return false;
+		}
+
+	}
+
+	
+	public boolean hasWordLeftLearn(String dictName) {
 		
 		String query = "SELECT * FROM `$tableName` WHERE freq = 0";
 		PreparedStatement stmt = null;
@@ -353,16 +481,16 @@ public class DB {
 		}
 	}
 
-	public Vector<String> getdictListData() {
+	public ArrayList<String> getdictListData() {
 
-		Vector<String> dictList;
+		ArrayList<String> dictList;
 		String query = "SELECT * FROM dict";
 		Statement stmt;
 		ResultSet rs;
 
 
 		try {
-			dictList = new Vector<String>();
+			dictList = new ArrayList<String>();
 			
 			conn = DriverManager.getConnection(path);
 			
